@@ -6,16 +6,9 @@ import com.intellij.openapi.actionSystem.PlatformDataKeys;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.Messages;
-import com.intellij.psi.PsiFile;
-import com.intellij.psi.PsiJavaFile;
-import com.intellij.psi.PsiMethod;
-import com.intellij.psi.PsiType;
-import com.intellij.psi.impl.source.PsiJavaFileImpl;
+import com.intellij.psi.*;
 import com.intellij.psi.util.PsiUtilBase;
 import org.apache.http.util.TextUtils;
-
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
 
 /**
  * Created by Zailong Shi on 2018/12/6.
@@ -62,29 +55,41 @@ public class RepositoryGenerator extends AnAction {
 
     private boolean generateRepositoryFile(Project project, PsiFile psiFile, String fileName) {
         return !new NewClassCommandAction(project, fileName,
-                generateRepositoryCode(psiFile, fileName),
+                generateRepositoryCode(project, psiFile, fileName),
                 psiFile.getContainingDirectory())
                 .execute()
                 .hasException();
     }
 
-    private String generateRepositoryCode(PsiFile psiFile, String className) {
+    private String generateRepositoryCode(Project project, PsiFile psiFile, String className) {
         PsiJavaFile javaFile = (PsiJavaFile) psiFile.getOriginalElement();
-        PsiMethod[] methods = javaFile.getClasses()[0].getMethods();
-        PsiJavaFile psiClass = new PsiJavaFileImpl(psiFile.getViewProvider());
-        psiClass.setName(className);
-        psiClass.setPackageName(javaFile.getPackageName());
+        PsiMethod[] methods = javaFile.getClasses()[0].getAllMethods();
+        PsiElementFactory elementFactory = JavaPsiFacade.getElementFactory(project);
+        PsiClass javaClass = elementFactory.createInterface(className);
         for (PsiMethod method : methods) {
-            PsiType returnType = method.getReturnType();
-            if (returnType instanceof ParameterizedType) {
-                Type[] types = ((ParameterizedType) returnType).getActualTypeArguments();
-                if (types[0] instanceof ParameterizedType) {
-                    types = ((ParameterizedType) returnType).getActualTypeArguments();
-
-                }
-            }
-            psiClass.add(method);
+            String newMethod = modifyMethodReturnType(method);
+            if (newMethod == null)
+                continue;
+            javaClass.add(elementFactory.createMethodFromText(newMethod, javaClass));
         }
-        return psiClass.getText();
+        return addImportList(javaFile.getImportList(), javaClass.getText());
+    }
+
+    private String modifyMethodReturnType(PsiMethod method) {
+        String text = method.getText();
+        if (!text.startsWith("List<")) {
+            return null;
+        }
+        String returnType = text.substring(text.lastIndexOf('<'), text.indexOf('>'));
+        String signature = text.substring(text.lastIndexOf('>')).trim();
+        return String.format("ArrayList%s %s", returnType, signature);
+    }
+
+    private String addImportList(PsiImportList importList, String classText) {
+        String importsText = "import java.util.ArrayList;";
+        if (importList != null) {
+            importsText += importList.getText();
+        }
+        return importsText + classText;
     }
 }
