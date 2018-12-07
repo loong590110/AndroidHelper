@@ -6,6 +6,8 @@ import com.intellij.openapi.actionSystem.PlatformDataKeys;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.Messages;
+import com.intellij.openapi.vfs.LocalFileSystem;
+import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.*;
 import com.intellij.psi.util.PsiUtilBase;
 import org.apache.http.util.TextUtils;
@@ -72,24 +74,59 @@ public class RepositoryGenerator extends AnAction {
                 continue;
             javaClass.add(elementFactory.createMethodFromText(newMethod, javaClass));
         }
-        return addImportList(javaFile.getImportList(), javaClass.getText());
+        return getImportListText(javaFile) + javaClass.getText();
     }
 
     private String modifyMethodReturnType(PsiMethod method) {
-        String text = method.getText();
-        if (!text.startsWith("List<")) {
+        if (method.getReturnTypeElement() == null) {
             return null;
         }
-        String returnType = text.substring(text.lastIndexOf('<'), text.indexOf('>'));
-        String signature = text.substring(text.lastIndexOf('>')).trim();
-        return String.format("ArrayList%s %s", returnType, signature);
+        String text = method.getReturnTypeElement().getText();
+        if (!text.contains("Observable<")) {
+            return null;
+        }
+        String returnType = text.substring(text.lastIndexOf('<') + 1, text.indexOf('>'));
+        String paramsText = removeAnnotations(method.getParameterList().getText());
+        String methodName = method.getName();
+        return String.format("RepositoryAccessWrapper<%s> %s(%s);", returnType, methodName, paramsText);
     }
 
-    private String addImportList(PsiImportList importList, String classText) {
-        String importsText = "import java.util.ArrayList;";
-        if (importList != null) {
-            importsText += importList.getText();
+    private CharSequence getImportListText(PsiJavaFile javaFile) {
+        StringBuilder importsText = new StringBuilder("import com.lang.mobile.arch.RepositoryAccessWrapper;");
+        if (javaFile.getImportList() != null) {
+            importsText.append(javaFile.getImportList().getText());
         }
-        return importsText + classText;
+        PsiReferenceList referenceList = javaFile.getClasses()[0].getExtendsList();
+        if (referenceList != null) {
+            PsiJavaCodeReferenceElement[] elements = referenceList.getReferenceElements();
+            for (PsiJavaCodeReferenceElement element : elements) {
+                String name = element.getQualifiedName().replace(".", "/");
+                String path = getJavaSrcDir(javaFile) + name + ".java";
+                VirtualFile virtualFile = LocalFileSystem.getInstance().findFileByPath(path);
+                if (virtualFile != null) {
+                    PsiJavaFile psiJavaFile = (PsiJavaFile) PsiUtilBase.getPsiFile(element.getProject(),
+                            virtualFile);
+                    importsText.append(getImportListText(psiJavaFile));
+                }
+            }
+        }
+        return importsText;
+    }
+
+    private String getJavaSrcDir(PsiJavaFile javaFile) {
+        String packageName = javaFile.getPackageName();
+        String path = javaFile.getContainingDirectory().getVirtualFile().getPath();
+        return path.substring(0, path.length() - packageName.length());
+    }
+
+    private String removeAnnotations(String text) {
+        String[] fragments = text.trim().substring(1, text.length() - 1).split(" ");
+        StringBuilder textBuilder = new StringBuilder();
+        for (String fragment : fragments) {
+            if (!fragment.startsWith("@")) {
+                textBuilder.append(fragment).append(" ");
+            }
+        }
+        return textBuilder.toString();
     }
 }

@@ -8,10 +8,7 @@ import com.intellij.openapi.project.Project;
 import com.intellij.psi.*;
 import com.intellij.psi.codeStyle.CodeStyleManager;
 import com.intellij.psi.codeStyle.JavaCodeStyleManager;
-import org.fest.util.Preconditions;
 import org.jetbrains.annotations.NotNull;
-
-import javax.annotation.Nonnull;
 
 /**
  * Created by Developer Zailong Shi on 2018/12/6.
@@ -24,16 +21,16 @@ public class NewClassCommandAction extends WriteCommandAction<PsiFile> {
     private final String content;
     private final PsiDirectory directory;
 
-    public NewClassCommandAction(@Nonnull Project project,
-                                 @Nonnull String name,
-                                 @Nonnull String content,
-                                 @Nonnull PsiDirectory directory) {
+    public NewClassCommandAction(@NotNull Project project,
+                                 @NotNull String name,
+                                 @NotNull String content,
+                                 @NotNull PsiDirectory directory) {
         super(project);
         this.fileFactory = PsiFileFactory.getInstance(project);
         this.directoryService = JavaDirectoryService.getInstance();
-        this.name = Preconditions.checkNotNull(name);
-        this.content = Preconditions.checkNotNull(content);
-        this.directory = Preconditions.checkNotNull(directory);
+        this.name = name;
+        this.content = content;
+        this.directory = directory;
     }
 
     @Override
