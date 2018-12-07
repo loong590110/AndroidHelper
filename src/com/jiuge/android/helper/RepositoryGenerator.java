@@ -1,7 +1,9 @@
 package com.jiuge.android.helper;
 
+import com.intellij.ide.DataManager;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
+import com.intellij.openapi.actionSystem.DataKeys;
 import com.intellij.openapi.actionSystem.PlatformDataKeys;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.project.Project;
@@ -74,7 +76,10 @@ public class RepositoryGenerator extends AnAction {
                 continue;
             javaClass.add(elementFactory.createMethodFromText(newMethod, javaClass));
         }
-        return getImportListText(javaFile) + javaClass.getText();
+        return getImportListText(javaFile)
+                + "\n" + getDocComment()
+                + "\n" + javaClass.getText();
+
     }
 
     private String modifyMethodReturnType(PsiMethod method) {
@@ -128,5 +133,15 @@ public class RepositoryGenerator extends AnAction {
             }
         }
         return textBuilder.toString();
+    }
+
+    private String getDocComment() {
+
+        String templatePathHolder = "/Users/{user}/Library/Preferences/" +
+                "{product}{version}/fileTemplates/includes/File Header.java";
+        String templatePath = templatePathHolder.replace("{user}", "")
+                .replace("{product}", "")
+                .replace("{version}", "");
+        return "";
     }
 }
