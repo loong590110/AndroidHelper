@@ -1,9 +1,9 @@
 package com.jiuge.android.helper;
 
-import com.intellij.ide.DataManager;
+import com.intellij.ide.fileTemplates.FileTemplate;
+import com.intellij.ide.fileTemplates.FileTemplateManager;
 import com.intellij.openapi.actionSystem.AnAction;
 import com.intellij.openapi.actionSystem.AnActionEvent;
-import com.intellij.openapi.actionSystem.DataKeys;
 import com.intellij.openapi.actionSystem.PlatformDataKeys;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.project.Project;
@@ -14,10 +14,16 @@ import com.intellij.psi.*;
 import com.intellij.psi.util.PsiUtilBase;
 import org.apache.http.util.TextUtils;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
 /**
  * Created by Zailong Shi on 2018/12/6.
  */
 public class RepositoryGenerator extends AnAction {
+
+    private String packageName;
+    private String projectName;
 
     @Override
     public void actionPerformed(AnActionEvent e) {
@@ -25,6 +31,8 @@ public class RepositoryGenerator extends AnAction {
         Editor editor = e.getData(PlatformDataKeys.EDITOR);
         PsiFile currentEditorFile = PsiUtilBase.getPsiFileInEditor(editor, project);
 
+        projectName = project.getName();
+        packageName = ((PsiJavaFile) currentEditorFile).getPackageName();
         String currentEditorFileName = currentEditorFile.getName();
         String generateFileName = generateFileName(currentEditorFileName);
         String finalFileName = showInputDialog(generateFileName);
@@ -136,12 +144,48 @@ public class RepositoryGenerator extends AnAction {
     }
 
     private String getDocComment() {
-
-        String templatePathHolder = "/Users/{user}/Library/Preferences/" +
-                "{product}{version}/fileTemplates/includes/File Header.java";
-        String templatePath = templatePathHolder.replace("{user}", "")
-                .replace("{product}", "")
-                .replace("{version}", "");
-        return "";
+//        String templatePathHolder = "/Users/{user}/Library/Preferences/" +
+//                "{product}{version}/fileTemplates/includes/File Header.java";
+//        String templatePath = templatePathHolder.replace("{user}", "")
+//                .replace("{product}", "")
+//                .replace("{version}", "");
+        FileTemplate[] template = FileTemplateManager.getDefaultInstance()
+                .getTemplates(FileTemplateManager.INCLUDES_TEMPLATES_CATEGORY);
+        String comment = "";
+        if (template.length > 0) {
+            comment = template[0].getText();
+        }
+        return parseComment(comment);
     }
+
+    private String parseComment(String comment) {
+        if (comment != null) {
+            String user = System.getenv("USERNAME");
+            SimpleDateFormat datetimeFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm");
+            String datetime = datetimeFormat.format(new Date());
+            String date = datetime.substring(0, "yyyy/MM/dd".length());
+            String time = datetime.substring("yyyy/MM/dd".length() + 1);
+            String year = datetime.substring(0, "yyyy".length());
+            String month = datetime.substring("yyyy/".length(), "yyyy/".length() + 2);
+            String day = datetime.substring("yyyy/MM/".length(), "yyyy/MM/".length() + 2);
+            String hour = datetime.substring("yyyy/MM/dd ".length(), "yyyy/MM/dd ".length() + 2);
+            String minute = datetime.substring("yyyy/MM/dd HH:".length(), "yyyy/MM/dd HH:".length() + 2);
+            comment = comment.replace("${PACKAGE_NAME}", packageName == null ? "" : packageName)
+                    .replace("${USER}", user == null ? "" : user)
+                    .replace("${DATE}", date)
+                    .replace("${TIME}", time)
+                    .replace("${YEAR}", year)
+                    .replace("${MONTH}", month)
+                    .replace("${MONTH_NAME_SHORT}", month)
+                    .replace("${MONTH_NAME_FULL}", month)
+                    .replace("${DAY}", day)
+                    .replace("${DAY_NAME_SHORT}", day)
+                    .replace("${DAY_NAME_FULL}", day)
+                    .replace("${HOUR}", hour)
+                    .replace("${MINUTE}", minute)
+                    .replace("${PROJECT_NAME}", projectName == null ? "" : projectName);
+        }
+        return comment;
+    }
+
 }
