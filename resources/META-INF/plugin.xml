@@ -30,8 +30,10 @@
 
     <actions>
         <!-- Add your actions here -->
-        <action id="com.jiuge.android.helper.repository.generator" class="com.jiuge.android.helper.RepositoryGenerator"
-                text="Generate Repository" description="repository generator">
+        <action id="com.jiuge.android.helper.repository.generator"
+                class="com.jiuge.android.helper.RepositoryGenerator"
+                text="Generate Repository"
+                description="repository generator">
             <add-to-group group-id="GenerateGroup" anchor="last"/>
         </action>
     </actions>

@@ -29,7 +29,12 @@ public class RepositoryGenerator extends AnAction {
     public void actionPerformed(AnActionEvent e) {
         Project project = e.getData(PlatformDataKeys.PROJECT);
         Editor editor = e.getData(PlatformDataKeys.EDITOR);
+
+        if (editor == null || project == null)
+            return;
         PsiFile currentEditorFile = PsiUtilBase.getPsiFileInEditor(editor, project);
+        if (currentEditorFile == null)
+            return;
 
         projectName = project.getName();
         packageName = ((PsiJavaFile) currentEditorFile).getPackageName();
@@ -37,10 +42,23 @@ public class RepositoryGenerator extends AnAction {
         String generateFileName = generateFileName(currentEditorFileName);
         String finalFileName = showInputDialog(generateFileName);
         if (!TextUtils.isEmpty(finalFileName)) {
-            if (generateRepositoryFile(project, currentEditorFile, finalFileName)) {
-                e.getPresentation().setEnabledAndVisible(true);
-            }
+            generateRepositoryFile(project, currentEditorFile, finalFileName);
         }
+    }
+
+    @Override
+    public void update(AnActionEvent e) {
+        super.update(e);
+        Project project = e.getData(PlatformDataKeys.PROJECT);
+        Editor editor = e.getData(PlatformDataKeys.EDITOR);
+
+        PsiFile currentEditorFile = null;
+        if (editor != null && project != null) {
+            currentEditorFile = PsiUtilBase.getPsiFileInEditor(editor, project);
+        }
+
+        e.getPresentation().setEnabledAndVisible(currentEditorFile instanceof PsiJavaFile
+                && ((PsiJavaFile) currentEditorFile).getClasses()[0].isInterface());
     }
 
     private String generateFileName(String fileName) {
