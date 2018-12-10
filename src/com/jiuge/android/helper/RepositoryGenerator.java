@@ -167,18 +167,20 @@ public class RepositoryGenerator extends AnAction {
 //        String templatePath = templatePathHolder.replace("{user}", "")
 //                .replace("{product}", "")
 //                .replace("{version}", "");
-        FileTemplate[] template = FileTemplateManager.getDefaultInstance()
+        FileTemplate[] templates = FileTemplateManager.getDefaultInstance()
                 .getTemplates(FileTemplateManager.INCLUDES_TEMPLATES_CATEGORY);
         String comment = "";
-        if (template.length > 0) {
-            comment = template[0].getText();
+        for (FileTemplate template : templates) {
+            if (template != null && "File Header".equals(template.getName())) {
+                comment = template.getText().trim();
+            }
         }
         return parseComment(comment);
     }
 
     private String parseComment(String comment) {
-        if (comment != null) {
-            String user = System.getenv("USERNAME");
+        if (!TextUtils.isEmpty(comment)) {
+            String user = System.getProperty("user.name");
             SimpleDateFormat datetimeFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm");
             String datetime = datetimeFormat.format(new Date());
             String date = datetime.substring(0, "yyyy/MM/dd".length());
